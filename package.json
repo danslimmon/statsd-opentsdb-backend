@@ -1,0 +1,19 @@
+{
+  "name": "statsd-opentsdb-backend",
+  "description": "A backend for StatsD to emit stats to OpenTSDB",
+  "author": "Emmet Murphy",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/emurphy/statsd-opentsdb-backend.git"
+  },
+  "version": "0.1.0",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "nodeunit": "0.7.x"
+  },
+  "engine": {
+    "node": ">=0.4"
+  },
+  "main": "statsd-opentsdb-backend/index.js"
+}
