@@ -25,6 +25,7 @@ You have to give basic information about your OpenTSDB server to use
 ## Issues
 Version 0.1.0 is a minimum viable product that puts metrics to OpenTSDB with one tag (source=statsd).
 
+Beware that statsd does not support tags. There is an impedance mismatch, in that graphite groups and aggregates via namespaces within the metric name. For example, ```foo.thingies.server1..n``` is aggregated via ```foo.thingies.*```. In OpenTSDB that would be ```foo.thingies``` metric with tag ```host=server1```. There is frankly no elegant way in statsd to derive the tag. A possible work-around would be by metric name convention, e.g. ```foo.thingies.__tags.host=server1.question=IsThisaHack```. Others are diverging towards statsd alternatives, for example [dd-agent](https://github.com/DataDog/dd-agent).
 
 If you want to contribute:
 
