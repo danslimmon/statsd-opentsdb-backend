@@ -81,20 +81,16 @@ var flush_stats = function opentsdb_flush(ts, metrics) {
   var gauges = metrics.gauges;
   var timers = metrics.timers;
   var sets = metrics.sets;
-  var counter_rates = metrics.counter_rates;
   var timer_data = metrics.timer_data;
   var statsd_metrics = metrics.statsd_metrics;
 
   for (key in counters) {
     var namespace = counterNamespace.concat(key);
     var value = counters[key];
-    var valuePerSecond = counter_rates[key]; // pre-calculated "per second" rate
 
     if (legacyNamespace === true) {
-      statString += 'put ' + namespace.join(".")       + ' ' + ts + ' ' + valuePerSecond + suffix;
       statString += 'put stats_counts.' + key + ' ' + ts + ' ' + value          + suffix;
     } else {
-      statString += 'put ' + namespace.concat('rate').join(".")  + ' ' + ts + ' ' + valuePerSecond + suffix;
       statString += 'put ' + namespace.concat('count').join(".") + ' ' + ts + ' ' + value          + suffix;
     }
 
