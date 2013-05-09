@@ -19,6 +19,7 @@ var debug;
 var flushInterval;
 var opentsdbHost;
 var opentsdbPort;
+var opentsdbTagPrefix;
 
 // prefix configuration
 var globalPrefix;
@@ -70,6 +71,42 @@ var post_stats = function opentsdb_post_stats(statString) {
   }
 }
 
+// Returns a list of "tagname=tagvalue" strings from the given metric name.
+function parse_tags(metric_name) {
+  var parts = metric_name.split(".");
+  var tags = [];
+  var current_tag_name = "";
+  for (i in parts) {
+    var p = parts[i]
+    if (p.indexOf(opentsdbTagPrefix) == 0) {
+      var tag_name = p.split(opentsdbTagPrefix)[1];
+      current_tag_name = tag_name
+    } else if (current_tag_name != "") {
+      tags.push(current_tag_name + "=" + p);
+      current_tag_name = "";
+    }
+  }
+
+  return tags;
+}
+
+// Strips out all tag information from the given metric name
+function strip_tags(metric_name) {
+  var parts = metric_name.split(".");
+  var rslt_parts = [];
+  while (parts.length > 0) {
+    if (parts[0].indexOf(opentsdbTagPrefix) == 0) {
+      parts.shift();
+      parts.shift();
+      continue;
+    }
+    rslt_parts.push(parts.shift());
+  }
+
+  return rslt_parts.join(".");
+}
+
+
 var flush_stats = function opentsdb_flush(ts, metrics) {
   var suffix = " source=statsd\n";
   var starttime = Date.now();
@@ -85,13 +122,16 @@ var flush_stats = function opentsdb_flush(ts, metrics) {
   var statsd_metrics = metrics.statsd_metrics;
 
   for (key in counters) {
-    var namespace = counterNamespace.concat(key);
+    var tags = parse_tags(key);
+    var stripped_key = strip_tags(key)
+
+    var namespace = counterNamespace.concat(stripped_key);
     var value = counters[key];
 
     if (legacyNamespace === true) {
-      statString += 'put stats_counts.' + key + ' ' + ts + ' ' + value          + suffix;
+      statString += 'put stats_counts.' + key + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
     } else {
-      statString += 'put ' + namespace.concat('count').join(".") + ' ' + ts + ' ' + value          + suffix;
+      statString += 'put ' + namespace.concat('count').join(".") + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
     }
 
     numStats += 1;
@@ -100,9 +140,12 @@ var flush_stats = function opentsdb_flush(ts, metrics) {
   for (key in timer_data) {
     if (Object.keys(timer_data).length > 0) {
       for (timer_data_key in timer_data[key]) {
-        var namespace = timerNamespace.concat(key);
+        var tags = parse_tags(key);
+        var stripped_key = strip_tags(key)
+
+        var namespace = timerNamespace.concat(stripped_key);
         var the_key = namespace.join(".");
-        statString += 'put ' + the_key + '.' + timer_data_key + ' ' + ts + ' ' + timer_data[key][timer_data_key] + suffix;
+        statString += 'put ' + the_key + '.' + timer_data_key + ' ' + ts + ' ' + timer_data[key][timer_data_key] + ' ' + tags.join(' ') + suffix;
       }
 
       numStats += 1;
@@ -110,14 +153,20 @@ var flush_stats = function opentsdb_flush(ts, metrics) {
   }
 
   for (key in gauges) {
-    var namespace = gaugesNamespace.concat(key);
-    statString += 'put ' + namespace.join(".") + ' ' + ts + ' ' + gauges[key] + suffix;
+    var tags = parse_tags(key);
+    var stripped_key = strip_tags(key)
+
+    var namespace = gaugesNamespace.concat(stripped_key);
+    statString += 'put ' + namespace.join(".") + ' ' + ts + ' ' + gauges[key] + ' ' + tags.join(' ') + suffix;
     numStats += 1;
   }
 
   for (key in sets) {
-    var namespace = setsNamespace.concat(key);
-    statString += 'put ' + namespace.join(".") + '.count ' + ts + ' ' + sets[key].values().length + suffix;
+    var tags = parse_tags(key);
+    var stripped_key = strip_tags(key)
+
+    var namespace = setsNamespace.concat(stripped_key);
+    statString += 'put ' + namespace.join(".") + '.count ' + ts + ' ' + sets[key].values().length + ' ' + tags.join(' ') + suffix;
     numStats += 1;
   }
 
@@ -150,6 +199,7 @@ exports.init = function opentsdb_init(startup_time, config, events) {
   debug = config.debug;
   opentsdbHost = config.opentsdbHost;
   opentsdbPort = config.opentsdbPort;
+  opentsdbTagPrefix = config.opentsdbTagPrefix
   config.opentsdb = config.opentsdb || {};
   globalPrefix    = config.opentsdb.globalPrefix;
   prefixCounter   = config.opentsdb.prefixCounter;

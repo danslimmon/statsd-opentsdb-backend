@@ -13,8 +13,15 @@ You have to give basic information about your OpenTSDB server to use
 ```
 { opentsdbHost: 'localhost'
 , opentsdbPort: 4242
+, opentsdbTagPrefix: '_t_'
 }
 ```
+
+## Tag support
+This backend allows you to attach OpenTSDB tags to your metrics. To add a counter
+called `gorets` and tag the data `foo=bar`, you'd write the following to statsd:
+
+    gorets._t_foo.bar:261|c
 
 ## Dependencies
 - none
@@ -23,10 +30,6 @@ You have to give basic information about your OpenTSDB server to use
 - [Bugs](https://github.com/emurphy/statsd-opentsdb-backend/issues)
 
 ## Issues
-Version 0.1.0 is a minimum viable product that puts metrics to OpenTSDB with one tag (source=statsd).
-
-Beware that statsd does not support tags. There is an impedance mismatch, in that graphite groups and aggregates via namespaces within the metric name. For example, ```foo.thingies.server1..n``` is aggregated via ```foo.thingies.*```. In OpenTSDB that would be ```foo.thingies``` metric with tag ```host=server1```. There is frankly no elegant way in statsd to derive the tag. A possible work-around would be by metric name convention, e.g. ```foo.thingies.__tags.host=server1.question=IsThisaHack```. Others are diverging towards statsd alternatives, for example [dd-agent](https://github.com/DataDog/dd-agent).
-
 If you want to contribute:
 
 1. Clone your fork
