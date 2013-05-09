@@ -11,7 +11,7 @@ publishes stats to OpenTSDB (http://opentsdb.net)
 ## Configuration
 You have to give basic information about your OpenTSDB server to use
 ```
-{ opentsdbhost: 'localhost'
+{ opentsdbHost: 'localhost'
 , opentsdbPort: 4242
 }
 ```
