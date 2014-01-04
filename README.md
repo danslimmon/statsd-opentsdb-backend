@@ -11,9 +11,25 @@ publishes stats to OpenTSDB (http://opentsdb.net)
 ## Configuration
 You have to give basic information about your OpenTSDB server to use
 ```
-{ opentsdbHost: 'localhost'
-, opentsdbPort: 4242
-, opentsdbTagPrefix: '_t_'
+{ 
+    opentsdbHost: 'localhost'
+  , opentsdbPort: 4242
+  , opentsdbTagPrefix: '_t_'
+  , backends: ['statsd-opentsdb-backend']
+}
+```
+
+Further customization, just like you would graphite (otherwise it just uses statsd defaults):
+```
+{
+  opentsdb: {
+      legacyNamespace: false
+    , globalPrefix: 'foo'
+    , prefixCounter: 'fooCounter'
+    , prefixTimer: 'fooTimer'
+    , prefixGauge: 'fooGauge'
+    , prefixSet: 'fooSet'
+  }
 }
 ```
 
