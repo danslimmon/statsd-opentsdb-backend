@@ -54,7 +54,7 @@ var post_stats = function opentsdb_post_stats(statString) {
         var ts = Math.round(new Date().getTime() / 1000);
         var namespace = globalNamespace.concat('statsd');
         statString += 'put ' + namespace.join(".") + '.opentsdbStats.last_exception ' + last_exception + ' ' + ts + "\n";
-        statString += 'put ' + namespace.join(".") + '.opentsdbStats.last_flush ' + last_flush + ' ' + ts + "\n";
+        statString += 'put ' + namespace.join(".") + '.opentsdbStats.last_flush ' + last_flush + ' ' + ts + "\n\r";
 		if (debug) {
 			util.log(statString)
 		}
