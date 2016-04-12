@@ -129,7 +129,7 @@ var flush_stats = function opentsdb_flush(ts, metrics) {
     var value = counters[key];
 
     if (legacyNamespace === true) {
-      statString += 'put stats_counts.' + key + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
+      statString += 'put stats_counts.' + stripped_key + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
     } else {
       statString += 'put ' + namespace.concat('count').join(".") + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
     }
