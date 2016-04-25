@@ -29,6 +29,7 @@ var prefixTimer;
 var prefixGauge;
 var prefixSet;
 
+var suffix;
 // set up namespaces
 var legacyNamespace = true;
 var globalNamespace  = [];
@@ -53,11 +54,11 @@ var post_stats = function opentsdb_post_stats(statString) {
       opentsdb.on('connect', function() {
         var ts = Math.round(new Date().getTime() / 1000);
         var namespace = globalNamespace.concat('statsd');
-        statString += 'put ' + namespace.join(".") + '.opentsdbStats.last_exception ' + last_exception + ' ' + ts + "\n";
-        statString += 'put ' + namespace.join(".") + '.opentsdbStats.last_flush ' + last_flush + ' ' + ts + "\n";
-		if (debug) {
-			util.log(statString)
-		}
+        statString += 'put ' + namespace.join(".") + '.opentsdbStats.last_exception ' + ts + ' ' + last_exception + suffix;
+        statString += 'put ' + namespace.join(".") + '.opentsdbStats.last_flush ' + ts + ' ' + last_flush + suffix;
+        if (debug) {
+          util.log(statString)
+        }
         this.write(statString);
         this.end();
         opentsdbStats.last_flush = Math.round(new Date().getTime() / 1000);
@@ -108,7 +109,6 @@ function strip_tags(metric_name) {
 
 
 var flush_stats = function opentsdb_flush(ts, metrics) {
-  var suffix = " source=statsd\n";
   var starttime = Date.now();
   var statString = '';
   var numStats = 0;
@@ -128,13 +128,22 @@ var flush_stats = function opentsdb_flush(ts, metrics) {
     var namespace = counterNamespace.concat(stripped_key);
     var value = counters[key];
 
-    if (legacyNamespace === true) {
-      statString += 'put stats_counts.' + stripped_key + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
-    } else {
-      statString += 'put ' + namespace.concat('count').join(".") + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
+    // Max value TSDB accepts is Long.MAX_VALUE
+    if (value > 9223372036854775807) {
+      util.log("Trying to write too high a value for counter "+key+" "+tags.join(' ')+": "+value);
     }
-
-    numStats += 1;
+    // Min value TSDB accepts is Long.MIN_VALUE
+    else if (value < -9223372036854775808) {
+      util.log("Trying to write too low a value for counter "+key+" "+tags.join(' ')+": "+value);
+    }
+    else {
+      if (legacyNamespace === true) {
+        statString += 'put stats_counts.' + stripped_key + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
+      } else {
+        statString += 'put ' + namespace.concat('count').join(".") + ' ' + ts + ' ' + value + ' ' + tags.join(' ') + suffix;
+      }
+      numStats += 1;
+    }
   }
 
   for (key in timer_data) {
@@ -145,29 +154,51 @@ var flush_stats = function opentsdb_flush(ts, metrics) {
 
         var namespace = timerNamespace.concat(stripped_key);
         var the_key = namespace.join(".");
-        statString += 'put ' + the_key + '.' + timer_data_key + ' ' + ts + ' ' + timer_data[key][timer_data_key] + ' ' + tags.join(' ') + suffix;
+        // Max value TSDB accepts is Long.MAX_VALUE
+        if (timer_data[key][timer_data_key] > 9223372036854775807) {
+          util.log("Trying to write too big a value for timer "+the_key + '.' + timer_data_key+" "+tags.join(' ')+": "+timer_data[key][timer_data_key]);
+        }
+        else {
+          statString += 'put ' + the_key + '.' + timer_data_key + ' ' + ts + ' ' + timer_data[key][timer_data_key] + ' ' + tags.join(' ') + suffix;
+        }
       }
-
       numStats += 1;
     }
   }
 
   for (key in gauges) {
     var tags = parse_tags(key);
-    var stripped_key = strip_tags(key)
+    var stripped_key = strip_tags(key);
 
     var namespace = gaugesNamespace.concat(stripped_key);
-    statString += 'put ' + namespace.join(".") + ' ' + ts + ' ' + gauges[key] + ' ' + tags.join(' ') + suffix;
-    numStats += 1;
+      
+    // Max value TSDB accepts is Long.MAX_VALUE
+    if (gauges[key] > 9223372036854775807) {
+      util.log("Trying to write too big a value for gauge "+namespace.join(".")+" "+tags.join(' ')+": "+gauges[key]);
+    }  
+    // Min value TSDB accepts is Long.MIN_VALUE
+    else if (gauges[key] < -9223372036854775808) {
+      util.log("Trying to write too small a value for gauge "+namespace.join(".")+" "+tags.join(' ')+": "+gauges[key]);
+    }
+    else {
+      statString += 'put ' + namespace.join(".") + ' ' + ts + ' ' + gauges[key] + ' ' + tags.join(' ') + suffix;
+      numStats += 1;
+    }
   }
 
   for (key in sets) {
     var tags = parse_tags(key);
-    var stripped_key = strip_tags(key)
-
+    var stripped_key = strip_tags(key);
+    
     var namespace = setsNamespace.concat(stripped_key);
-    statString += 'put ' + namespace.join(".") + '.count ' + ts + ' ' + sets[key].values().length + ' ' + tags.join(' ') + suffix;
-    numStats += 1;
+    // Max value TSDB accepts is Long.MAX_VALUE
+    if (sets[key].values().length > 9223372036854775807) {
+      util.log("Trying to write too big a value for set "+namespace.join(".")+" "+tags.join(' ')+": "+gauges[key]);
+    }
+    else {
+      statString += 'put ' + namespace.join(".") + '.count ' + ts + ' ' + sets[key].values().length + ' ' + tags.join(' ') + suffix;
+      numStats += 1;
+    }
   }
 
   var namespace = globalNamespace.concat('statsd');
@@ -196,6 +227,7 @@ var backend_status = function opentsdb_status(writeCb) {
 };
 
 exports.init = function opentsdb_init(startup_time, config, events) {
+  suffix = " source=statsd\n";
   debug = config.debug;
   opentsdbHost = config.opentsdbHost;
   opentsdbPort = config.opentsdbPort;
